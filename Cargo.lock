@@ -522,6 +522,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "tokio-im"
+version = "0.1.0"
+dependencies = [
+ "ractor",
+ "tokio",
+]
+
+[[package]]
 name = "tokio-macros"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -530,14 +538,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
-]
-
-[[package]]
-name = "tokio-ml"
-version = "0.1.0"
-dependencies = [
- "ractor",
- "tokio",
 ]
 
 [[package]]
