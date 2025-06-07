@@ -1,6 +1,7 @@
 mod model;
 mod service;
 mod test;
+mod net;
 
 use crate::model::message_type::MessageType;
 use crate::service::user_service::login;
@@ -54,11 +55,14 @@ async fn main() {
 
 // 手动处理路由
 async fn route_line(wt: &mut FramedWrite<WriteHalf<'_>, LinesCodec>, message: String) {
-    let mut split = message.split("#"); // message格式为 [type#body]
+    // 处理message格式，格式为 [type#body]
+    let mut split = message.split("#");
     let t = split.next().unwrap().to_string().parse::<usize>().unwrap();
     let username = split.next().unwrap();
+    
+    // 匹配消息类型
     match MessageType::from_index(t).unwrap() {
-        // body格式为 [username#password]
+        // 登录：body格式为 [username#password]
         MessageType::LoginMessage => {
             tracing::info!("Received login message: {}", username);
             let password = split.next().unwrap();
@@ -73,7 +77,7 @@ async fn route_line(wt: &mut FramedWrite<WriteHalf<'_>, LinesCodec>, message: St
                 }
             }
         }
-        // body格式为 [username#chat]
+        // 与服务器对话：body格式为 [username#chat]
         MessageType::ChatMessage => {
             let chat_message = split.next().unwrap();
             tracing::info!("Received chat message from {}: {}", username, chat_message);
