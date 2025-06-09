@@ -1,13 +1,13 @@
 pub enum MessageType {
     LoginMessage,
-    ChatMessage,
+    ChatToServerMessage,
 }
 
 impl MessageType {
     pub fn from_index(index: usize) -> Option<Self> {
         match index {
             0 => Some(MessageType::LoginMessage),
-            1 => Some(MessageType::ChatMessage),
+            1 => Some(MessageType::ChatToServerMessage),
             _ => None,
         }
     }

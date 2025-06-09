@@ -2,13 +2,13 @@
 async fn test_client() {
     use crate::model::message_type::MessageType;
     use crate::model::user::User;
+    use crate::net::message_codec::{MessageDecoder, MessageEncoder};
     use futures::StreamExt;
     use futures::sink::SinkExt;
     use std::io;
     use tokio::net::TcpStream;
     use tokio_util::codec::FramedRead;
     use tokio_util::codec::FramedWrite;
-    use tokio_util::codec::LinesCodec;
     use tracing_subscriber::fmt;
     use tracing_subscriber::layer::SubscriberExt;
     use tracing_subscriber::util::SubscriberInitExt;
@@ -24,9 +24,10 @@ async fn test_client() {
     tracing::debug!("Connected to server");
 
     // 定义行编码器
-    let encoder = LinesCodec::new();
-    let mut rd = FramedRead::new(reader, encoder.clone());
-    let mut wt = FramedWrite::new(writer, encoder.clone());
+    let decoder = MessageDecoder::new();
+    let encoder = MessageEncoder::new();
+    let mut rd = FramedRead::new(reader, decoder);
+    let mut wt = FramedWrite::new(writer, encoder);
 
     // 尝试登录
     tracing::info!("Type your login message.");
@@ -40,17 +41,15 @@ async fn test_client() {
 
         username = username.trim().to_string();
         password = password.trim().to_string();
-        let message = format!(
-            "{}#{}#{}",
+        let send = (
             MessageType::LoginMessage as usize,
-            username,
-            password,
+            format!("{}#{}", username, password,),
         );
-        wt.send(message).await.unwrap();
+        wt.send(send).await.unwrap();
 
         if let Some(result) = rd.next().await {
             match result {
-                Ok(line) => match line.as_str() {
+                Ok((_, message)) => match message.as_str() {
                     "Invalid login attempt" => {
                         tracing::info!("Login failed.")
                     }
@@ -71,7 +70,7 @@ async fn test_client() {
     }
 
     // 设置登录用户
-    let user = User { username, password };
+    let user = User::new(username, password);
 
     // 向服务器发送消息
     tracing::info!("Type your message.");
@@ -84,11 +83,9 @@ async fn test_client() {
             tracing::info!("Quit.");
             break;
         }
-        let message = format!(
-            "{}#{}#{}",
-            MessageType::ChatMessage as usize,
-            user.username,
-            input
+        let message = (
+            MessageType::ChatToServerMessage as usize,
+            format!("{}#{}", user.username, input),
         );
         wt.send(message).await.unwrap();
         line.clear();

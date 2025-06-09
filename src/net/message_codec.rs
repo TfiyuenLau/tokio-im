@@ -9,6 +9,12 @@ const MAX_LEN: usize = 8 * 1024 * 1024; // 最大消息长度限制
 /// 消息解码器
 pub struct MessageDecoder {}
 
+impl MessageDecoder {
+    pub fn new() -> Self {
+        MessageDecoder {}
+    }
+}
+
 impl Decoder for MessageDecoder {
     type Item = (usize, String); // 返回值为 (message_type, message_body)
     type Error = io::Error;
@@ -30,7 +36,7 @@ impl Decoder for MessageDecoder {
             ));
         }
 
-        // 数据未接收完整，等待更多数据
+        // 数据未接收完整，等待更多并预留空间
         if src.len() < HEADER_LEN + total_length {
             src.reserve(HEADER_LEN + total_length - src.len());
             return Ok(None);
@@ -43,20 +49,26 @@ impl Decoder for MessageDecoder {
 
         // 提取消息体
         let body_start = HEADER_LEN + TYPE_LEN;
-        let body_end = body_start + total_length - TYPE_LEN;
+        let body_end = HEADER_LEN + total_length;
         let data = &src[body_start..body_end];
 
+        // 将正文转换为 UTF-8 字符串
         let message = String::from_utf8(data.to_vec())
             .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Invalid UTF-8"))?;
 
-        src.advance(body_end); // 移动缓冲区指针
-
+        src.advance(body_end); // 更新缓冲区指针，丢弃已处理的数据
         Ok(Some((message_type, message)))
     }
 }
 
 /// 消息编码器
 pub struct MessageEncoder {}
+
+impl MessageEncoder {
+    pub fn new() -> Self {
+        MessageEncoder {}
+    }
+}
 
 impl Encoder<(usize, String)> for MessageEncoder {
     type Error = io::Error;
