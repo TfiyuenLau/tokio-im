@@ -82,6 +82,10 @@ async fn handle_connection(socket: TcpStream, users: UserManager) {
                     );
                     wt.send(send).await.unwrap();
                 }
+                MessageType::GetAliveListMessage => {
+                    let send = (MessageType::GetAliveListMessage as usize, message);
+                    wt.send(send).await.unwrap();
+                }
                 MessageType::ChatToUserMessage => {
                     let send = (MessageType::ChatToUserMessage as usize, message);
                     wt.send(send).await.unwrap();
@@ -144,6 +148,18 @@ async fn handle_connection(socket: TcpStream, users: UserManager) {
                             );
                             tx.send(send).await.unwrap();
                         }
+                    }
+                    // 获取在线用户列表：body格式为 [username]
+                    MessageType::GetAliveListMessage => {
+                        let username_vec: Vec<String> = {
+                            let users_lock = users.lock().unwrap();
+                            users_lock.keys().cloned().collect()
+                        };
+                        let users_str = username_vec.join(", ");
+                        
+                        tracing::info!("Requested alive list from {}: {}", username, users_str);
+                        let send = (MessageType::GetAliveListMessage, users_str);
+                        tx.send(send).await.unwrap();
                     }
                     // 与指定用户对话：body格式为 [username#to_username#chat]
                     MessageType::ChatToUserMessage => {

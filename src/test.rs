@@ -81,6 +81,9 @@ async fn test_client() {
                     let content = split.next().unwrap();
                     tracing::info!("Broadcast from {}: {}", username, content);
                 }
+                MessageType::GetAliveListMessage => {
+                    tracing::info!("Alive list: {}", message);
+                }
                 MessageType::ChatToUserMessage => {
                     let mut split = message.split("#");
                     let username = split.next().unwrap();
@@ -94,9 +97,10 @@ async fn test_client() {
 
     // 向服务器发送消息
     tracing::info!("Operation Menu:");
-    tracing::info!("1. broadcast your message to all users.");
-    tracing::info!("2. chat to a user.");
-    tracing::info!("3. quit.");
+    tracing::info!("1. get alive user list.");
+    tracing::info!("2. broadcast your message to all users.");
+    tracing::info!("3. chat to a user.");
+    tracing::info!("4. quit.");
     tracing::info!("Input 'back' when your want back to menu.");
     loop {
         tracing::info!("Type a number to select.");
@@ -104,6 +108,14 @@ async fn test_client() {
 
         match input.as_str() {
             "1" => {
+                input.clear();
+                let message = (
+                    MessageType::GetAliveListMessage as usize,
+                    user.clone().unwrap().username,
+                );
+                wt.send(message).await.unwrap();
+            }
+            "2" => {
                 input.clear();
                 tracing::info!("Type your message.");
                 input = async_read_line().await;
@@ -121,7 +133,7 @@ async fn test_client() {
                 tracing::info!("Message sent.");
                 input.clear();
             }
-            "2" => {
+            "3" => {
                 input.clear();
 
                 tracing::info!("Type a username.");
@@ -151,7 +163,7 @@ async fn test_client() {
                 tracing::info!("Message sent.");
                 input.clear();
             }
-            "3" => {
+            "4" => {
                 tracing::info!("Quit.");
                 break;
             }
