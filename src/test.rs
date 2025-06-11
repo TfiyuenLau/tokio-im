@@ -16,10 +16,11 @@ async fn test_client() {
     tracing_subscriber::fmt::try_init().expect("Failed to initialize logger");
     // 读取配置
     dotenv().ok();
+    let server_addr = env::var("SERVER_ADDR").unwrap_or("127.0.0.1".to_string());
     let port = env::var("PORT").unwrap_or("8888".to_string());
 
     // 连接到端口对应的IM服务器
-    let stream = TcpStream::connect(format!("127.0.0.1:{}", port))
+    let stream = TcpStream::connect(format!("{}:{}", server_addr, port))
         .await
         .expect("Failed to connect to server");
     let (reader, writer) = tokio::io::split(stream);
