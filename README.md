@@ -1,5 +1,7 @@
 # tokio-im
 
+![Snipaste_2025-06-11_21-31-16.jpg](assets/Snipaste_2025-06-11_21-31-16.jpg)
+
 基于Tokio网络框架的IM（即时通讯）DEMO项目。功能模块如下:
 
 **1.核心通信功能**
