@@ -1,14 +1,14 @@
+mod common;
 mod model;
 mod net;
 mod service;
 mod test;
-mod utils;
 
+use crate::common::user_manager::{UserManager, register_user, unregister_user};
 use crate::model::message_type::MessageType;
 use crate::model::user::User;
-use crate::net::message_codec::{MessageDecoder, MessageEncoder};
+use crate::net::message_codec::MessageCodec;
 use crate::service::user_service::login;
-use crate::utils::user_manager::{UserManager, register_user, unregister_user};
 use dotenv::dotenv;
 use futures::{SinkExt, StreamExt};
 use std::collections::HashMap;
@@ -25,9 +25,9 @@ use tracing_subscriber::util::SubscriberInitExt;
 async fn main() {
     // 初始化日志记录器
     tracing_subscriber::registry().with(fmt::layer()).init();
-    // 读取配置
+    // 读取环境配置
     dotenv().ok();
-    let port = env::var("PORT").unwrap_or("8080".to_string());
+    let port = env::var("PORT").unwrap_or("8888".to_string());
 
     // 绑定到指定端口，监听传入的连接
     let listener = TcpListener::bind(format!("127.0.0.1:{}", port))
@@ -51,14 +51,14 @@ async fn main() {
     }
 }
 
-// 对客户端连接进行处理
+// 处理客户端的连接请求
 async fn handle_connection(socket: TcpStream, users: UserManager) {
     let mut current_username: Option<String> = None;
 
     // 使用自定义Codec实现消息编解码
     let (reader, writer) = tokio::io::split(socket);
-    let mut wt = FramedWrite::new(writer, MessageEncoder::new());
-    let mut rd = FramedRead::new(reader, MessageDecoder::new());
+    let mut wt = FramedWrite::new(writer, MessageCodec::new());
+    let mut rd = FramedRead::new(reader, MessageCodec::new());
 
     // 通过消息传递实现异步任务通信
     let (tx, mut rx) = channel::<(MessageType, String)>(32);
@@ -156,7 +156,7 @@ async fn handle_connection(socket: TcpStream, users: UserManager) {
                             users_lock.keys().cloned().collect()
                         };
                         let users_str = username_vec.join(", ");
-                        
+
                         tracing::info!("Requested alive list from {}: {}", username, users_str);
                         let send = (MessageType::GetAliveListMessage, users_str);
                         tx.send(send).await.unwrap();

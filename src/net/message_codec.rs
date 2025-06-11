@@ -6,16 +6,17 @@ const HEADER_LEN: usize = 4; // 消息长度字段占用4字节
 const TYPE_LEN: usize = 4; // MessageType 占用4字节
 const MAX_LEN: usize = 8 * 1024 * 1024; // 最大消息长度限制
 
-/// 消息解码器
-pub struct MessageDecoder {}
+/// 自定义消息编解码器
+pub struct MessageCodec {}
 
-impl MessageDecoder {
+impl MessageCodec {
+    #[allow(dead_code)]
     pub fn new() -> Self {
-        MessageDecoder {}
+        MessageCodec {}
     }
 }
 
-impl Decoder for MessageDecoder {
+impl Decoder for MessageCodec {
     type Item = (usize, String); // 返回值为 (message_type, message_body)
     type Error = io::Error;
 
@@ -61,16 +62,7 @@ impl Decoder for MessageDecoder {
     }
 }
 
-/// 消息编码器
-pub struct MessageEncoder {}
-
-impl MessageEncoder {
-    pub fn new() -> Self {
-        MessageEncoder {}
-    }
-}
-
-impl Encoder<(usize, String)> for MessageEncoder {
+impl Encoder<(usize, String)> for MessageCodec {
     type Error = io::Error;
 
     fn encode(&mut self, item: (usize, String), dst: &mut BytesMut) -> Result<(), Self::Error> {

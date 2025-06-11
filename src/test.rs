@@ -1,9 +1,9 @@
 #[tokio::test]
 async fn test_client() {
+    use crate::common::io_utils::async_read_line;
     use crate::model::message_type::MessageType;
     use crate::model::user::User;
-    use crate::net::message_codec::{MessageDecoder, MessageEncoder};
-    use crate::utils::io_utils::async_read_line;
+    use crate::net::message_codec::MessageCodec;
     use dotenv::dotenv;
     use futures::StreamExt;
     use futures::sink::SinkExt;
@@ -16,7 +16,7 @@ async fn test_client() {
     tracing_subscriber::fmt::try_init().expect("Failed to initialize logger");
     // 读取配置
     dotenv().ok();
-    let port = env::var("PORT").unwrap_or("8080".to_string());
+    let port = env::var("PORT").unwrap_or("8888".to_string());
 
     // 连接到端口对应的IM服务器
     let stream = TcpStream::connect(format!("127.0.0.1:{}", port))
@@ -26,8 +26,8 @@ async fn test_client() {
     tracing::debug!("Connected to server");
 
     // 定义行编码器
-    let mut rd = FramedRead::new(reader, MessageDecoder::new());
-    let mut wt = FramedWrite::new(writer, MessageEncoder::new());
+    let mut rd = FramedRead::new(reader, MessageCodec::new());
+    let mut wt = FramedWrite::new(writer, MessageCodec::new());
 
     // 尝试登录
     tracing::info!("Type your login message.");
@@ -48,7 +48,7 @@ async fn test_client() {
             match result {
                 Ok((_, message)) => match message.as_str() {
                     "Invalid login attempt" => {
-                        tracing::info!("Login failed.")
+                        tracing::error!("Login failed.")
                     }
                     _ => {
                         tracing::info!("Login successful.");
@@ -100,7 +100,7 @@ async fn test_client() {
     tracing::info!("1. get alive user list.");
     tracing::info!("2. broadcast your message to all users.");
     tracing::info!("3. chat to a user.");
-    tracing::info!("4. quit.");
+    tracing::info!("9. quit.");
     tracing::info!("Input 'back' when your want back to menu.");
     loop {
         tracing::info!("Type a number to select.");
@@ -163,7 +163,7 @@ async fn test_client() {
                 tracing::info!("Message sent.");
                 input.clear();
             }
-            "4" => {
+            "9" => {
                 tracing::info!("Quit.");
                 break;
             }
