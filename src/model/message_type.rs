@@ -6,6 +6,7 @@ pub enum MessageType {
 }
 
 impl MessageType {
+    #[allow(dead_code)]
     pub fn from_index(index: usize) -> Option<Self> {
         match index {
             0 => Some(MessageType::LoginMessage),
