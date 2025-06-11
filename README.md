@@ -1,8 +1,8 @@
 # tokio-im
 
-![Snipaste_2025-06-11_21-31-16.jpg](assets/Snipaste_2025-06-11_21-31-16.jpg)
+基于 Tokio 网络框架的 IM（即时通讯）项目 DEMO。功能模块如下:
 
-基于Tokio网络框架的IM（即时通讯）项目DEMO。功能模块如下:
+![Snipaste_2025-06-11_21-31-16.jpg](assets/Snipaste_2025-06-11_21-31-16.jpg)
 
 **1.核心通信功能**
 
@@ -35,7 +35,7 @@ tokio-im/
 │   │   ├── message_codec.rs
 │   │   └── protobuf_codec.rs
 │   ├── service/
-│   │   └── protobuf_codec.rs
+│   │   └── user_service.rs
 │   ├── lib.rs
 │   ├── main.rs
 │   └── test.rs
