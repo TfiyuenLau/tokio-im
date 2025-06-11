@@ -4,17 +4,22 @@ async fn test_client() {
     use crate::model::user::User;
     use crate::net::message_codec::{MessageDecoder, MessageEncoder};
     use crate::utils::io_utils::async_read_line;
+    use dotenv::dotenv;
     use futures::StreamExt;
     use futures::sink::SinkExt;
+    use std::env;
     use tokio::net::TcpStream;
     use tokio_util::codec::FramedRead;
     use tokio_util::codec::FramedWrite;
 
     // 初始化日志记录器
     tracing_subscriber::fmt::try_init().expect("Failed to initialize logger");
+    // 读取配置
+    dotenv().ok();
+    let port = env::var("PORT").unwrap_or("8080".to_string());
 
     // 连接到端口对应的IM服务器
-    let stream = TcpStream::connect("127.0.0.1:8888")
+    let stream = TcpStream::connect(format!("127.0.0.1:{}", port))
         .await
         .expect("Failed to connect to server");
     let (reader, writer) = tokio::io::split(stream);

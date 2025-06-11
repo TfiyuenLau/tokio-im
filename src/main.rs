@@ -9,8 +9,10 @@ use crate::model::user::User;
 use crate::net::message_codec::{MessageDecoder, MessageEncoder};
 use crate::service::user_service::login;
 use crate::utils::user_manager::{UserManager, register_user, unregister_user};
+use dotenv::dotenv;
 use futures::{SinkExt, StreamExt};
 use std::collections::HashMap;
+use std::env;
 use std::sync::{Arc, Mutex};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::mpsc::{Sender, channel};
@@ -23,9 +25,12 @@ use tracing_subscriber::util::SubscriberInitExt;
 async fn main() {
     // 初始化日志记录器
     tracing_subscriber::registry().with(fmt::layer()).init();
+    // 读取配置
+    dotenv().ok();
+    let port = env::var("PORT").unwrap_or("8080".to_string());
 
-    // 绑定到指定地址，监听传入的连接
-    let listener = TcpListener::bind("127.0.0.1:8888")
+    // 绑定到指定端口，监听传入的连接
+    let listener = TcpListener::bind(format!("127.0.0.1:{}", port))
         .await
         .expect("Failed to bind");
 
