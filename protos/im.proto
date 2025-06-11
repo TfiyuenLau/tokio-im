@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+package im.protobuf;
+
+// 消息类型枚举
+enum MessageType {
+  LOGIN_MESSAGE = 0;
+  BROADCAST_MESSAGE = 1;
+  GET_ALIVE_LIST_MESSAGE = 2;
+  CHAT_TO_USER_MESSAGE = 3;
+}
+
+// 登录请求：username + password
+message LoginRequest {
+  string username = 1;
+  string password = 2;
+}
+
+// 登录消息：username
+message LoginResponse {
+  string username = 1;
+}
+
+// 广播消息：username + content
+message BroadcastMessage {
+  string username = 1;
+  string content = 2;
+}
+
+// 获取在线用户列表请求：username
+message GetAliveListRequest {
+  string username = 1;
+}
+
+// 在线用户列表响应：usernames
+message GetAliveListResponse {
+  repeated string usernames = 1;
+}
+
+// 私聊消息：from_username + to_username + content
+message ChatToUserMessage {
+  string from_username = 1;
+  string to_username = 2;
+  string content = 3;
+}
+
+// 通用消息包装器（包含消息类型和具体数据）
+message ImMessage {
+  MessageType message_type = 1;
+
+  oneof payload {
+    LoginRequest login_request = 2;
+    LoginResponse login_response = 3;
+    BroadcastMessage broadcast_message = 4;
+    GetAliveListRequest get_alive_list_request = 5;
+    GetAliveListResponse get_alive_list_response = 6;
+    ChatToUserMessage chat_to_user_message = 7;
+  }
+}
