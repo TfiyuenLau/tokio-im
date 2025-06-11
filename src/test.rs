@@ -1,14 +1,19 @@
 #[tokio::test]
 async fn test_client() {
     use crate::common::io_utils::async_read_line;
-    use crate::model::message_type::MessageType;
+    use crate::common::io_utils::match_message_type;
     use crate::model::user::User;
-    use crate::net::message_codec::MessageCodec;
+    use crate::net::protobuf_codec::ProtobufCodec;
     use dotenv::dotenv;
     use futures::StreamExt;
     use futures::sink::SinkExt;
     use std::env;
     use tokio::net::TcpStream;
+    use tokio_im::protobuf::im::ImMessage;
+    use tokio_im::protobuf::im::LoginRequest;
+    use tokio_im::protobuf::im::MessageType;
+    use tokio_im::protobuf::im::im_message::Payload;
+    use tokio_im::protobuf::im::{BroadcastDto, ChatToUserDto, GetAliveListRequest};
     use tokio_util::codec::FramedRead;
     use tokio_util::codec::FramedWrite;
 
@@ -23,12 +28,12 @@ async fn test_client() {
     let stream = TcpStream::connect(format!("{}:{}", server_addr, port))
         .await
         .expect("Failed to connect to server");
-    let (reader, writer) = tokio::io::split(stream);
     tracing::debug!("Connected to server");
 
     // 定义行编码器
-    let mut rd = FramedRead::new(reader, MessageCodec::new());
-    let mut wt = FramedWrite::new(writer, MessageCodec::new());
+    let (reader, writer) = tokio::io::split(stream);
+    let mut rd = FramedRead::new(reader, ProtobufCodec::new());
+    let mut wt = FramedWrite::new(writer, ProtobufCodec::new());
 
     // 尝试登录
     tracing::info!("Type your login message.");
@@ -39,24 +44,32 @@ async fn test_client() {
         tracing::info!("Input your password.");
         let mut password = async_read_line().await;
 
-        let send = (
-            MessageType::LoginMessage as usize,
-            format!("{}#{}", username, password,),
-        );
+        let send = ImMessage {
+            message_type: MessageType::LoginMessage as i32,
+            payload: Some(Payload::LoginRequest(LoginRequest {
+                username: username.clone(),
+                password: password.clone(),
+            })),
+        };
         wt.send(send).await.unwrap();
 
         if let Some(result) = rd.next().await {
             match result {
-                Ok((_, message)) => match message.as_str() {
-                    "Invalid login attempt" => {
-                        tracing::error!("Login failed.")
+                Ok(im_message) => {
+                    let payload = im_message.payload.as_ref().unwrap();
+                    if let Payload::LoginResponse(message) = payload {
+                        match message.username.as_str() {
+                            "Invalid login attempt" => {
+                                tracing::error!("Login failed.")
+                            }
+                            _ => {
+                                tracing::info!("Login successful.");
+                                user.replace(User::new(username, password));
+                                break;
+                            }
+                        }
                     }
-                    _ => {
-                        tracing::info!("Login successful.");
-                        user.replace(User::new(username, password));
-                        break;
-                    }
-                },
+                }
                 Err(err) => {
                     tracing::error!("Error reading line: {}", err);
                     break;
@@ -72,25 +85,26 @@ async fn test_client() {
     tokio::spawn(async move {
         tracing::info!("Waiting for message...");
         while let Some(result) = rd.next().await {
-            let (t, message) = result.unwrap();
-            let message_type: MessageType = MessageType::from_index(t).unwrap();
+            let im_message = result.unwrap();
+            let message_type: MessageType = match_message_type(im_message.message_type).unwrap();
+            let payload = im_message.payload.as_ref().unwrap();
+
             match message_type {
                 MessageType::LoginMessage => {}
                 MessageType::BroadcastMessage => {
-                    let mut split = message.split("#");
-                    let username = split.next().unwrap();
-                    let content = split.next().unwrap();
-                    tracing::info!("Broadcast from {}: {}", username, content);
+                    if let Payload::BroadcastDto(message) = payload {
+                        tracing::info!("Broadcast from {}: {}", message.username, message.content);
+                    }
                 }
                 MessageType::GetAliveListMessage => {
-                    tracing::info!("Alive list: {}", message);
+                    if let Payload::GetAliveListResponse(message) = payload {
+                        tracing::info!("Alive list: {}", message.usernames);
+                    }
                 }
                 MessageType::ChatToUserMessage => {
-                    let mut split = message.split("#");
-                    let username = split.next().unwrap();
-                    let to_username = split.next().unwrap();
-                    let content = split.next().unwrap();
-                    tracing::info!("Received from {} to {}: {}", username, to_username, content);
+                    if let Payload::ChatToUserDto(message) = payload {
+                        tracing::info!("Chat from {}: {}", message.from_username, message.content);
+                    }
                 }
             }
         }
@@ -110,11 +124,14 @@ async fn test_client() {
         match input.as_str() {
             "1" => {
                 input.clear();
-                let message = (
-                    MessageType::GetAliveListMessage as usize,
-                    user.clone().unwrap().username,
-                );
-                wt.send(message).await.unwrap();
+                let send = ImMessage {
+                    message_type: MessageType::GetAliveListMessage as i32,
+                    payload: Some(Payload::GetAliveListRequest(GetAliveListRequest {
+                        username: user.clone().unwrap().username,
+                    })),
+                };
+                wt.send(send).await.unwrap();
+                input.clear()
             }
             "2" => {
                 input.clear();
@@ -126,12 +143,16 @@ async fn test_client() {
                     continue;
                 }
 
-                let message = (
-                    MessageType::BroadcastMessage as usize,
-                    format!("{}#{}", user.clone().unwrap().username, input),
-                );
-                wt.send(message).await.unwrap();
+                let send = ImMessage {
+                    message_type: MessageType::BroadcastMessage as i32,
+                    payload: Some(Payload::BroadcastDto(BroadcastDto {
+                        username: user.clone().unwrap().username,
+                        content: input.clone(),
+                    })),
+                };
+                wt.send(send).await.unwrap();
                 tracing::info!("Message sent.");
+
                 input.clear();
             }
             "3" => {
@@ -151,17 +172,17 @@ async fn test_client() {
                     continue;
                 }
 
-                let message = (
-                    MessageType::ChatToUserMessage as usize,
-                    format!(
-                        "{}#{}#{}",
-                        user.clone().unwrap().username,
+                let send = ImMessage {
+                    message_type: MessageType::ChatToUserMessage as i32,
+                    payload: Some(Payload::ChatToUserDto(ChatToUserDto {
+                        from_username: user.clone().unwrap().username,
                         to_username,
-                        input
-                    ),
-                );
-                wt.send(message).await.unwrap();
+                        content: input.clone(),
+                    })),
+                };
+                wt.send(send).await.unwrap();
                 tracing::info!("Message sent.");
+
                 input.clear();
             }
             "9" => {

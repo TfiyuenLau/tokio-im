@@ -22,7 +22,7 @@ message LoginResponse {
 }
 
 // 广播消息：username + content
-message BroadcastMessage {
+message BroadcastDTO {
   string username = 1;
   string content = 2;
 }
@@ -34,26 +34,26 @@ message GetAliveListRequest {
 
 // 在线用户列表响应：usernames
 message GetAliveListResponse {
-  repeated string usernames = 1;
+  string usernames = 1;
 }
 
 // 私聊消息：from_username + to_username + content
-message ChatToUserMessage {
+message ChatToUserDTO {
   string from_username = 1;
   string to_username = 2;
   string content = 3;
 }
 
-// 通用消息包装器（包含消息类型和具体数据）
+// 通用消息对象包装器（包含消息类型和具体数据对象）
 message ImMessage {
   MessageType message_type = 1;
 
   oneof payload {
     LoginRequest login_request = 2;
     LoginResponse login_response = 3;
-    BroadcastMessage broadcast_message = 4;
+    BroadcastDTO broadcast_dto = 4;
     GetAliveListRequest get_alive_list_request = 5;
     GetAliveListResponse get_alive_list_response = 6;
-    ChatToUserMessage chat_to_user_message = 7;
+    ChatToUserDTO chat_to_user_dto = 7;
   }
 }
